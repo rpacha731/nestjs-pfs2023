@@ -71,8 +71,8 @@ export class ProductsService {
     } else {
       const queryBuilder = this.productRepository.createQueryBuilder('prod');
       product = await queryBuilder
-        .where('UPPER(name) =:name', {
-          name: term.toUpperCase()
+        .where('UPPER(name) LIKE :name', {
+          name: `%${term.toUpperCase()}%`,
         })
         .leftJoinAndSelect('prod.images', 'prodImages')
         .getOne();
@@ -81,6 +81,27 @@ export class ProductsService {
     if (!product) throw new NotFoundException(`Product with ${term} not found`);
 
     return product;
+  }
+
+  async findAllByTerm(term: string) {
+    let products: Product[];
+
+    if (isUUID(term)) {
+      products[0] = await this.productRepository.findOneBy({ id: term });
+    } else {
+      const queryBuilder = this.productRepository.createQueryBuilder('prod');
+      products = await queryBuilder
+        .where('UPPER(name) LIKE :name', {
+          name: `%${term.toUpperCase()}%`,
+        })
+        .leftJoinAndSelect('prod.images', 'prodImages')
+        .getMany();
+    }
+
+    if (!products)
+      throw new NotFoundException(`Products with ${term} not found`);
+
+    return products;
   }
 
   async findOnePlain(term: string) {
@@ -144,13 +165,16 @@ export class ProductsService {
     );
   }
 
-  async deleteAllProducts() {
-    const query = this.productRepository.createQueryBuilder('product');
-
-    try {
-      return await query.delete().where({}).execute();
-    } catch (error) {
-      this.handleDBExceptions(error);
-    }
+  async uploadImageToProduct(image, uuidProduct: string) {
+    let product = await this.productRepository.findOneBy({ id: uuidProduct });
+    if (!product)
+      throw new NotFoundException(`Product with id: ${uuidProduct} not found`);
+    const productImage = this.productImageRepository.create({ url: image.url });
+    product.images.push(productImage);
+    await this.productRepository.save(product);
+    return {
+      image_url: image,
+      message: 'Imagen subida correctamente',
+    };
   }
 }

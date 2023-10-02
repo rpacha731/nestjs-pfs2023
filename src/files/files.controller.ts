@@ -13,18 +13,12 @@ import { fileFilter } from './helpers';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BufferedFile } from '../minio-client/dto/file.model';
 
-@ApiTags('Files - Get and Upload')
+@ApiTags('Files - Upload')
 @Controller('files')
 export class FilesController {
   constructor(
-    private readonly imageUploadService: ImageUploadService,
-    private readonly configService: ConfigService,
+    private readonly imageUploadService: ImageUploadService
   ) {}
-
-  @Get('product/:imageName')
-  findProductImage(@Param('imageName') imageName: string) {
-    return this.imageUploadService.getImage(imageName);
-  }
 
   @Post('product')
   @UseInterceptors(
@@ -32,7 +26,7 @@ export class FilesController {
       fileFilter: fileFilter,
     }),
   )
-  uploadProductImage(@UploadedFile() file: BufferedFile) {
-    return this.imageUploadService.uploadImage(file);
+  uploadProductImage(@UploadedFile() file: BufferedFile, @Param('uuidProduct') uuidProduct: string) {
+    return this.imageUploadService.uploadImage(file, uuidProduct);
   }
 }
